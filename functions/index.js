@@ -7,12 +7,15 @@ app.use(cors())
 
 const { getAllYaps, postOneYap } = require('./handlers/yaps');
 
-const { signup, login, uploadImage } = require('./handlers/users');
+const { signup, login, uploadImage, addUserDetails, getAuthenticatedUser } = require('./handlers/users');
 
 
 //Yap routes
 app.get('/yaps', getAllYaps)
 app.post('/yaps',FBAuth, postOneYap)
+app.post('/user/image', FBAuth, uploadImage)
+app.post('/user', FBAuth, addUserDetails)
+app.get('/user', FBAuth, getAuthenticatedUser)
 
 //signup and login routes
 
@@ -20,7 +23,7 @@ app.post('/signup', signup)
 
 app.post('/login', login)
 
-app.post('/user/image', FBAuth, uploadImage)
+
 
 
 exports.api = functions.https.onRequest(app);

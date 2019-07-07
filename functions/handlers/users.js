@@ -4,7 +4,7 @@ const config = require('../util/config')
 
 firebase.initializeApp(config);
 
-const { validateSignUp, validateLogIn } = require('../util/validators')
+const { validateSignUp, validateLogIn, reduceUserDetails } = require('../util/validators')
 
 exports.signup = (req,res) => {
     const newUser = {
@@ -87,6 +87,42 @@ exports.login = (req,res) => {
     })
 }
 
+
+exports.addUserDetails = (req,res) => {
+    let userDetails = reduceUserDetails(req.body);
+
+    db.doc(`/users/${req.user.handle}`).update(userDetails)
+    .then(() => {
+        return res.json({ message: 'Details added'})
+    })
+    .catch(err => {
+        console.error(err);
+        return res.status(500).json({ error: err.code})
+        
+    });
+}
+
+exports.getAuthenticatedUser = (req, res) => {
+    let userData = {};
+    db.doc(`/users/${req.user.handle}`).get()
+    .then(doc => {
+        userData.credentials = doc.data();
+        return db.collection('likes').where('userHandle', "==", req.user.handle).get();
+    })
+    .then(data => {
+        userData.likes=[];
+        data.forEach(doc => {
+            userData.likes.push(doc.data());
+        })
+        return res.json(userData)
+    })
+    .catch(err => {
+        console.error(err);
+        return res.status(500).json({ error: err.code})
+        
+    });
+}
+
 exports.uploadImage = (req, res) => {
     const BusBoy = require('busboy');
     const path = require('path');
@@ -101,6 +137,9 @@ exports.uploadImage = (req, res) => {
         console.log(fieldname);
         console.log(filename);
         console.log(mimetype);
+        if (mimetype !== 'image/jpeg' && mimetype !== 'image/png') {
+            return res.status(400).json({ error: 'Wrong file type submitted' });    
+        }
 
         const imageExtension = filename.split('.')[filename.split('.').length - 1];
         imageFileName = `${Math.round(Math.random()*10000000000000).toString()}.${imageExtension}`;
