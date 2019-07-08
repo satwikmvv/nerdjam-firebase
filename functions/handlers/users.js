@@ -226,7 +226,7 @@ exports.uploadImage = (req, res) => {
 }
 
 exports.markNotificationsRead = (req,res) => {
-    let batch = db.batch();
+    let batch = db.batch(); //for changing multiple collections
     req.body.forEach(notificationId => {
         const notification = db.doc(`/notifications/${notificationId}`);
         batch.update(notification, {read: true});
