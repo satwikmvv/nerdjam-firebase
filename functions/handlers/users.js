@@ -114,6 +114,23 @@ exports.getAuthenticatedUser = (req, res) => {
         data.forEach(doc => {
             userData.likes.push(doc.data());
         })
+        return db.collection('notifications').where('recipient', '==', req.user.handle)
+        .orderBy('createdAt', 'desc').limit(10).get();
+        
+    })
+    .then(data => {
+        userData.notifications = [];//use es6 so that i can use spread operator already
+        data.forEach(doc => {
+            userData.notifications.push({
+                recipient: doc.data().recipient,
+                sender: doc.data().sender,
+                read: doc.data().read,
+                yapId: doc.data().yapId,
+                type: doc.data().type,
+                createdAt: doc.data().createdAt,
+                notificationId: doc.id
+            })
+        });
         return res.json(userData)
     })
     .catch(err => {
@@ -121,6 +138,41 @@ exports.getAuthenticatedUser = (req, res) => {
         return res.status(500).json({ error: err.code})
         
     });
+}
+
+exports.getUserDetails = (req,res) => {
+    let userData = {};
+    db.doc(`/users/${req.params.handle}`).get()
+    .then(doc=>{
+        if(doc.exists){
+            userData.user = doc.data();
+            return db.collection('yaps').where('userHandle', '==', req.params.handle)
+            .orderBy('createdAt', 'desc')
+            .get();
+        }
+        else {
+            return res.status(404).json({error:'user not found'});
+        }
+    })
+    .then(data => {
+        userData.yaps =[];
+        data.forEach(doc => {
+            userData.yaps.push({
+                body: doc.data().body,
+                createdAt: doc.data().createdAt,
+                userHandle: doc.data().userHandle,
+                userImage: doc.data().userImage,
+                likeCount: doc.data().likeCount,
+                commentCount: doc.data().commentCount,
+                yapId: doc.id
+            })
+        });
+        return res.json(userData);
+    })
+    .catch(err=>{
+        console.error(err);
+        return res.status(500).json({ error: err.code})
+    })
 }
 
 exports.uploadImage = (req, res) => {
@@ -171,4 +223,20 @@ exports.uploadImage = (req, res) => {
         })
     });
     busboy.end(req.rawBody);
+}
+
+exports.markNotificationsRead = (req,res) => {
+    let batch = db.batch();
+    req.body.forEach(notificationId => {
+        const notification = db.doc(`/notifications/${notificationId}`);
+        batch.update(notification, {read: true});
+    });
+    batch.commit()
+    .then(() => {
+        return res.json({ message: 'notifications read'})
+    })
+    .catch(err => {
+        console.error(err)
+        return res.status(500).json({ error: err.code });
+    })
 }
