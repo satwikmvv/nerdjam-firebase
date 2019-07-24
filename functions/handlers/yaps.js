@@ -24,6 +24,7 @@ exports.getAllYaps = (req,res) => {
 }
 
 exports.postOneYap = (req,res) => {
+    if(req.body.body.trim() === '') return res.status(400).json({comment:'You gotta Yap something!'})
     const newYap = {
         body: req.body.body,
         userHandle: req.user.handle,
